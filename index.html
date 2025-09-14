@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Torneio Retro Tech — Batalha dos Pixels (IFC Brusque)</title>
+    <link rel="icon" href="https://i.imgur.com/k2x22Ww.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="bg-animated"></div>
+    <header class="topbar">
+        <div class="logo">
+            <h1>Torneio <span class="neon">Retro Tech</span></h1>
+            <p class="subtitle">Batalha dos Pixels — IFC Campus Brusque</p>
+        </div>
+        <div class="meta">
+            <div>📅 <strong>23/10/2025 às 20:40</strong></div>
+            <div>👥 <strong>30 participantes (máx)</strong></div>
+            <div>🏫 <strong>IFC - Campus Brusque</strong></div>
+        </div>
+        <button id="streamerModeBtn" class="btn neon-btn">Modo Transmissão</button>
+    </header>
+    <main class="container">
+        <section class="card theme-switcher">
+            <h2>Mudar Tema</h2>
+            <div class="controls">
+                <button class="btn theme-btn" data-theme="default">Padrão</button>
+                <button class="btn theme-btn" data-theme="gameboy">Game Boy</button>
+                <button class="btn theme-btn" data-theme="nes">NES</button>
+            </div>
+        </section>
+
+        <section class="card event-info">
+            <h2>Identificação do Evento</h2>
+            <div class="info-list">
+                <p><strong>Sala:</strong> <span class="highlight-info">12</span></p>
+                <p><strong>Responsáveis:</strong> <span class="highlight-info">Equipe de Jogos — IFC Campus
+                        Brusque</span></p>
+                <p><strong>Organização:</strong> <span class="highlight-info">Denis Contini, Kaik Kyoshy, Abraão
+                        Texeira</span></p>
+            </div>
+        </section>
+        <section class="card bottom-row">
+            <div class="hall fame-card">
+                <h2>Hall da Fama</h2>
+                <div class="champ-box">
+                    <div class="champ-title">Campeão</div>
+                    <div id="champName" class="champ-name">— Nenhum ainda —</div>
+                </div>
+                <button id="clearHall" class="btn">Limpar Hall</button>
+            </div>
+            <div class="timer-card">
+                <h2>Cronômetro de Partida</h2>
+                <div class="timer-display">
+                    <div id="timerDigits" class="digits" contenteditable="true" spellcheck="false">03:00</div>
+                </div>
+                <div class="timer-controls">
+                    <button id="startTimer" class="btn neon-btn">Iniciar</button>
+                    <button id="pauseTimer" class="btn">Pausar</button>
+                    <button id="resetTimer" class="btn">Resetar</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card game-sequence">
+            <h2>🔥 Sequência de Jogos para o Torneio</h2>
+            <div class="game-cards-container">
+                <div class="game-card">
+                    <div class="game-info">
+                        <span class="game-phase">🟢 Fase 1 — Quebra-gelo</span>
+                        <h3 class="game-title">Bomberman</h3>
+                        <ul class="game-rules-list">
+                            <li>Formato: Arena multiplayer (2 a 4 jogadores)</li>
+                            <li>Modo de jogo: Batalha clássica</li>
+                            <li>Power-ups: Permitidos</li>
+                            <li>Critério de vitória: Último sobrevivente vence</li>
+                        </ul>
+                    </div>
+                    <img src="https://bdjogos.com.br/capas/22920-bomberman-party-edition-playstation-capa-1.jpg"
+                        alt="Bomberman" class="game-img">
+                </div>
+
+                <div class="game-card">
+                    <div class="game-info">
+                        <span class="game-phase">🟡 Fase 2 — Corrida maluca</span>
+                        <h3 class="game-title">Super Mario Kart</h3>
+                        <ul class="game-rules-list">
+                            <li>Formato: Corrida individual</li>
+                            <li>Pista: sorteada</li>
+                            <li>Voltas: 3 voltas</li>
+                            <li>Itens: Permitidos</li>
+                            <li>Critério de vitória: Quem fizer as 3 voltas primeiro</li>
+                        </ul>
+                    </div>
+                    <img src="https://upload.wikimedia.org/wikipedia/pt/d/db/Mario_Kart_Super_Circuit_capa.jpg"
+                        alt="Super Mario Kart" class="game-img">
+                </div>
+
+                <div class="game-card">
+                    <div class="game-info">
+                        <span class="game-phase">🔴 Fase 3 — Batalha de gigantes</span>
+                        <h3 class="game-title">Street Fighter II</h3>
+                        <ul class="game-rules-list">
+                            <li>Formato: 1 X 1</li>
+                            <li>Partida: Melhor de 3 rounds</li>
+                            <li>Tempo por round: 1 minuto</li>
+                            <li>Personagens: Livres</li>
+                        </ul>
+                    </div>
+                    <img src="https://bdjogos.com.br/capas/19855-street-fighter-ii-game-boy-capa-1.jpg"
+                        alt="Street Fighter II" class="game-img">
+                </div>
+            </div>
+        </section>
+
+        <section class="card" id="sorteo-section">
+            <h2>Sistema de Sorteio de Confrontos</h2>
+            <p>Insira até <strong>30</strong> nomes — 1 por linha.</p>
+            <textarea id="namesInput" placeholder="Nome do jogador 1&#10;Nome do jogador 2&#10;..."></textarea>
+            <div class="controls">
+                <button id="shuffleBtn" class="btn neon-btn">Sortear Duplas</button>
+                <button id="clearBtn" class="btn">Limpar</button>
+            </div>
+            <div id="pairsContainer" class="pairs-grid" aria-live="polite"></div>
+        </section>
+        <section class="card bracket">
+            <h2>Chaveamento do Torneio</h2>
+            <p class="muted">Os rounds são gerados automaticamente conforme o número de participantes.</p>
+            <div id="bracketContainer" class="bracket-wrap"></div>
+        </section>
+        <footer class="card footer">
+            <p>Projeto: <strong>Torneio Retro Tech</strong> • Realizado pelo <strong>IFC Campus Brusque</strong></p>
+            <p>Data: <strong>23/10/2025</strong></p>
+            <p>🕹️ By <a href="https://www.instagram.com/kaik_kyoshy" target="_blank">Kaik
+                    Kyoshy</a> e <a href="https://www.linkedin.com/in/abraaoteixeira" target="_blank">Abraão Texeira</a>
+            </p>
+        </footer>
+    </main>
+    <canvas id="confettiCanvas"></canvas>
+    <audio id="bgMusic" loop src="https://opengameart.org/sites/default/files/Arcade%20fast%20flow1.ogg"></audio>
+    <audio id="sfx-click" src="https://opengameart.org/sites/default/files/button-1.ogg"></audio>
+    <audio id="sfx-start" src="https://opengameart.org/sites/default/files/coin.ogg"></audio>
+    <audio id="sfx-win" src="https://opengameart.org/sites/default/files/jingle-win.ogg"></audio>
+    <audio id="sfx-fail" src="https://opengameart.org/sites/default/files/jingle-lose_00.ogg"></audio>
+    <div id="music-control" class="btn" title="Ativar/Desativar música">🔇</div>
+    <script src="script.js"></script>
+</body>
+
+</html>
