@@ -1,6 +1,5 @@
 (() => {
     'use strict';
-
     const Utils = {
         getById: (id) => document.getElementById(id),
         clamp: (n, a, b) => Math.max(a, Math.min(b, n)),
@@ -31,6 +30,7 @@
             document.body.className = className ? className : '';
         }
     };
+
     const DOM = {
         namesInput: Utils.getById('namesInput'),
         shuffleBtn: Utils.getById('shuffleBtn'),
@@ -53,6 +53,7 @@
         themeButtons: document.querySelectorAll('.theme-btn'),
         streamerModeBtn: Utils.getById('streamerModeBtn')
     };
+
     const State = {
         participants: [],
         pairs: [],
@@ -69,13 +70,15 @@
             instances: [],
             timeoutId: null,
             isRunning: false
-        }
+        },
+        slotAnimationInterval: null
     };
 
     const Config = {
         MAX_PARTICIPANTS: 30,
         HALL_KEY: 'retro_tourney_champion_v1'
     };
+
 
     const AudioVisuals = {
         playSound: (soundId) => {
@@ -262,13 +265,30 @@
             const matches = Array.from(DOM.bracketContainer.querySelectorAll('.round:first-child .match'));
             const shuffledList = [...list];
             Utils.shuffleArray(shuffledList);
-            matches.forEach((match, index) => {
-                const playerA = shuffledList[index * 2] || '—';
-                const playerB = shuffledList[index * 2 + 1] ?? '— (bye)';
+            const numPlayers = shuffledList.length;
+
+            let powerOfTwo = 1;
+            while (powerOfTwo < numPlayers) {
+                powerOfTwo *= 2;
+            }
+
+            const numByes = powerOfTwo - numPlayers;
+            const playersAndByes = [...shuffledList];
+            for (let i = 0; i < numByes; i++) {
+                playersAndByes.push('— (bye)');
+            }
+            Utils.shuffleArray(playersAndByes);
+            const firstRoundMatches = matches.length;
+
+            for (let i = 0; i < firstRoundMatches; i++) {
+                const match = matches[i];
+                const playerA = playersAndByes[i * 2] || '—';
+                const playerB = playersAndByes[i * 2 + 1] || '—';
+
                 match.querySelector('.team-a').textContent = playerA;
                 match.querySelector('.team-b').textContent = playerB;
                 match.querySelectorAll('.team').forEach(t => t.classList.remove('winner'));
-            });
+            }
         },
 
         setupBracketHandlers: () => {
@@ -279,7 +299,25 @@
                     const advanceWinner = (winnerSide) => {
                         const winnerEl = matchEl.querySelector(`.team-${winnerSide}`);
                         const winnerName = winnerEl.textContent.trim();
-                        if (!winnerName || winnerName === '—' || winnerName.includes('(bye)')) return;
+                        if (!winnerName || winnerName === '—' || winnerName.includes('(bye)')) {
+                            if (winnerName.includes('(bye)')) {
+                                const opponentSide = winnerSide === 'a' ? 'b' : 'a';
+                                const opponentEl = matchEl.querySelector(`.team-${opponentSide}`);
+                                const opponentName = opponentEl.textContent.trim();
+                                if (!opponentName.includes('(bye)') && opponentName !== '—') {
+                                    if (nextRoundMatches) {
+                                        const nextMatchIndex = Math.floor(matchIndex / 2);
+                                        const nextTeamEl = nextRoundMatches[nextMatchIndex].querySelector(matchIndex % 2 === 0 ? '.team-a' : '.team-b');
+                                        nextTeamEl.textContent = opponentName;
+                                        Utils.flashElement(nextTeamEl.closest('.match'));
+                                    } else {
+                                        Tournament.finalizeChampion(opponentName);
+                                    }
+                                }
+                                return;
+                            }
+                            return;
+                        }
 
                         matchEl.querySelectorAll('.team').forEach(t => t.classList.remove('winner'));
                         winnerEl.classList.add('winner');
@@ -319,6 +357,7 @@
             State.confetti.system.launch();
         }
     };
+
 
     const Timer = {
         updateDisplay: () => {
@@ -372,7 +411,6 @@
         }
     };
 
-
     const setupEventListeners = () => {
         document.body.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON' || e.target.closest('.btn')) {
@@ -390,15 +428,26 @@
             DOM.shuffleBtn.classList.add('shuffle-active');
             document.body.classList.add('flicker-animation');
             AudioVisuals.playSound('sfxStart');
-
             State.participants = rawNames.length > Config.MAX_PARTICIPANTS ? rawNames.slice(0, Config.MAX_PARTICIPANTS) : [...rawNames];
-
             await Tournament.animatePairs(2000);
             Utils.shuffleArray(State.participants);
             State.pairs = [];
-            for (let i = 0; i < State.participants.length; i += 2) {
-                State.pairs.push([State.participants[i], State.participants[i + 1] ?? '— (bye)']);
+            let powerOfTwo = 1;
+            while (powerOfTwo < State.participants.length) {
+                powerOfTwo *= 2;
             }
+            const numByes = powerOfTwo - State.participants.length;
+
+            const participantsWithByes = [...State.participants];
+            for (let i = 0; i < numByes; i++) {
+                participantsWithByes.push('— (bye)');
+            }
+            Utils.shuffleArray(participantsWithByes);
+
+            for (let i = 0; i < participantsWithByes.length; i += 2) {
+                State.pairs.push([participantsWithByes[i], participantsWithByes[i + 1] ?? '— (bye)']);
+            }
+
             Tournament.renderPairs(State.pairs);
             Tournament.createBracket(State.participants.length);
             Tournament.fillFirstRound(State.participants);
@@ -406,7 +455,6 @@
             DOM.shuffleBtn.classList.remove('shuffle-active');
             document.body.classList.remove('flicker-animation');
         });
-
         DOM.clearBtn.addEventListener('click', () => {
             DOM.namesInput.value = '';
             State.participants = [];
@@ -451,13 +499,11 @@
             DOM.streamerModeBtn.textContent = inStreamerMode ? 'Sair do Modo' : 'Modo Transmissão';
         });
     };
-
     const init = () => {
         setupEventListeners();
         HallOfFame.load();
         Timer.updateDisplay();
         Tournament.renderPairs([]);
-
         const champObserver = new MutationObserver(() => {
             DOM.champNameEl.setAttribute('aria-live', 'polite');
         });
@@ -466,4 +512,5 @@
 
     init();
 
+})();
 })();
