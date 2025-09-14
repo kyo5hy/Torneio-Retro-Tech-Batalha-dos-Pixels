@@ -1,11 +1,11 @@
 ```markdown
-# 🎮 Torneio Retro Tech — Batalha dos Pixels
+🎮 Torneio Retro Tech — Batalha dos Pixels
 
 Bem-vindo ao projeto oficial do **Torneio Retro Tech**, um evento temático realizado no **IFC Campus Brusque** que celebra os clássicos dos videogames em um ambiente competitivo e nostálgico. Este site foi desenvolvido para organizar, exibir e acompanhar o torneio em tempo real, com visual retrô e funcionalidades interativas.
 
 ---
 
-## 🧠 Objetivo
+🧠 Objetivo
 
 Criar uma plataforma web leve e divertida para:
 
@@ -17,7 +17,7 @@ Criar uma plataforma web leve e divertida para:
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+🛠️ Tecnologias Utilizadas
 
 | Linguagem | Ícone | Função |
 |----------|:-----:|--------|
@@ -27,18 +27,7 @@ Criar uma plataforma web leve e divertida para:
 
 ---
 
-## 📁 Estrutura do Projeto
-
-```
-/index.html         → Página principal do torneio  
-/style.css          → Estilos visuais e tema retrô  
-/script.js          → Lógica do cronômetro e sorteio  
-/assets/            → Imagens, ícones e favicons pixelados  
-```
-
----
-
-## 🖼️ Visual
+🖼️ Visual
 
 O site apresenta:
 
@@ -49,7 +38,7 @@ O site apresenta:
 
 ---
 
-## 🚀 Como usar
+🚀 Como usar
 
 1. Clone o repositório
 2. Abra o `index.html` em seu navegador
@@ -57,7 +46,7 @@ O site apresenta:
 
 ---
 
-## 📜 Licença
+📜 Licença
 
 Este projeto é de uso educacional e comunitário. Sinta-se livre para adaptar e reutilizar com os devidos créditos.
 
@@ -68,4 +57,3 @@ Este projeto é de uso educacional e comunitário. Sinta-se livre para adaptar e
 
 ---
 
-Se quiser, posso transformar esse README em uma versão visual com emojis temáticos para cada jogo ou até gerar uma versão em inglês para divulgação internacional. Quer que eu faça isso?
