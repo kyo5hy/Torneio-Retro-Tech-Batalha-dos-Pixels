@@ -1,7 +1,7 @@
 ```markdown
 🎮 Torneio Retro Tech — Batalha dos Pixels
 
-Bem-vindo ao projeto oficial do **Torneio Retro Tech**, um evento temático realizado no **IFC Campus Brusque** que celebra os clássicos dos videogames em um ambiente competitivo e nostálgico. Este site foi desenvolvido para organizar, exibir e acompanhar o torneio em tempo real, com visual retrô e funcionalidades interativas.
+Bem-vindo ao projeto oficial do Torneio Retro Tech, um evento temático realizado no IFC Campus Brusque que celebra os clássicos dos videogames em um ambiente competitivo e nostálgico. Este site foi desenvolvido para organizar, exibir e acompanhar o torneio em tempo real, com visual retrô e funcionalidades interativas.
 
 ---
 
@@ -11,7 +11,7 @@ Criar uma plataforma web leve e divertida para:
 
 - Exibir o cronômetro de partidas
 - Mostrar o chaveamento dos confrontos
-- Apresentar os jogos em destaque: *Street Fighter I*, *Super Mario Kart* e *Bomberman*
+- Apresentar os jogos em destaque: Street Fighter I, Super Mario Kart e Bomberman
 - Informar os participantes e o público sobre o andamento do torneio
 - Reforçar o espírito retrô com design pixelado, emojis e cores vibrantes
 
@@ -31,10 +31,10 @@ Criar uma plataforma web leve e divertida para:
 
 O site apresenta:
 
-- **Navbar** com título e ícone personalizado (favicon)
-- **Cronômetro funcional** com botões de iniciar, pausar e resetar
-- **Chaveamento do torneio** com sorteio visual
-- **Rodapé personalizado** com créditos: `© 2025 Kaik `
+- Navbar com título e ícone personalizado (favicon)
+- Cronômetro funcional com botões de iniciar, pausar e resetar
+- Chaveamento do torneio com sorteio visual
+- Rodapé personalizado com créditos: `© 2025 Kaik `
 
 ---
 
@@ -52,8 +52,5 @@ Este projeto é de uso educacional e comunitário. Sinta-se livre para adaptar e
 
 ---
 
-**By Kaik** — *Retro Tech 2025* 🕹️
+By Kaik — Retro Tech 2025 🕹️
 ```
-
----
-
