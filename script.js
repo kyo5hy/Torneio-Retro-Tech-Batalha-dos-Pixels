@@ -1,13 +1,18 @@
 (() => {
     'use strict';
+
+    // ===================================================================
+    // Módulos de Suporte
+    // ===================================================================
+
     const Utils = {
         getById: (id) => document.getElementById(id),
-        clamp: (n, a, b) => Math.max(a, Math.min(b, n)),
         shuffleArray: (arr) => {
             for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [arr[i], arr[j]] = [arr[j], arr[i]];
             }
+            return arr;
         },
         flashElement: (el) => {
             el.style.transition = 'transform 0.18s';
@@ -21,495 +26,529 @@
         },
         parseTime: (timeStr) => {
             const parts = timeStr.trim().split(':').map(Number);
-            if (parts.length !== 2 || parts.some(isNaN)) {
-                return 180;
-            }
-            return Utils.clamp(parts[0] * 60 + parts[1], 0, 5999);
+            return parts.length === 2 && !parts.some(isNaN) ? (parts[0] * 60 + parts[1]) : 180;
         },
-        setBodyClass: (className) => {
-            document.body.className = className ? className : '';
-        }
+        setBodyClass: (className) => { document.body.className = className || ''; }
     };
 
     const DOM = {
+        // Setup e Torneio
         namesInput: Utils.getById('namesInput'),
-        shuffleBtn: Utils.getById('shuffleBtn'),
+        startTournamentBtn: Utils.getById('startTournamentBtn'),
         clearBtn: Utils.getById('clearBtn'),
-        pairsContainer: Utils.getById('pairsContainer'),
-        bgMusic: Utils.getById('bgMusic'),
-        musicControl: Utils.getById('music-control'),
+        editNamesBtn: Utils.getById('editNamesBtn'),
+        setupPhaseEl: Utils.getById('setup-phase'),
+        tournamentControlsEl: Utils.getById('tournament-controls'),
+        drawBombermanBtn: Utils.getById('drawBomberman'),
+        drawMarioKartBtn: Utils.getById('drawMarioKart'),
+        drawStreetFighterBtn: Utils.getById('drawStreetFighter'),
+        roundsContainer: Utils.getById('roundsContainer'),
+
+        // Placar, Final e Memorial
+        leaderboardList: Utils.getById('leaderboardList'),
+        championMemorialEl: Utils.getById('championMemorial'),
+        memorialChampNameEl: Utils.getById('memorialChampName'),
+        finalSectionEl: Utils.getById('final-section'),
+        finalist1El: Utils.getById('finalist1'),
+        finalist2El: Utils.getById('finalist2'),
         champNameEl: Utils.getById('champName'),
-        clearHallBtn: Utils.getById('clearHall'),
-        bracketContainer: Utils.getById('bracketContainer'),
-        confettiCanvas: Utils.getById('confettiCanvas'),
+        declareWinnerBtn: Utils.getById('declareWinnerBtn'),
+        clearChampionBtn: Utils.getById('clearChampionBtn'),
+
+        // Timer
         startTimerBtn: Utils.getById('startTimer'),
         pauseTimerBtn: Utils.getById('pauseTimer'),
         resetTimerBtn: Utils.getById('resetTimer'),
         timerDigits: Utils.getById('timerDigits'),
-        sfxClick: Utils.getById('sfx-click'),
-        sfxStart: Utils.getById('sfx-start'),
-        sfxWin: Utils.getById('sfx-win'),
-        sfxFail: Utils.getById('sfx-fail'),
+
+        // UI e Efeitos
+        notificationOverlay: Utils.getById('notification-overlay'),
+        rulesModal: Utils.getById('rulesModal'),
+        rulesBtn: Utils.getById('rulesBtn'),
+        closeRulesBtn: Utils.getById('closeRulesBtn'),
+        bgMusic: Utils.getById('bgMusic'),
+        musicControl: Utils.getById('music-control'),
+        confettiCanvas: Utils.getById('confettiCanvas'),
         themeButtons: document.querySelectorAll('.theme-btn'),
-        streamerModeBtn: Utils.getById('streamerModeBtn')
+        streamerModeBtn: Utils.getById('streamerModeBtn'),
+        sfx: {
+            click: Utils.getById('sfx-click'),
+            start: Utils.getById('sfx-start'),
+            win: Utils.getById('sfx-win'),
+            fail: Utils.getById('sfx-fail'),
+        }
     };
 
     const State = {
-        participants: [],
-        pairs: [],
-        timer: {
-            interval: null,
-            remainingTime: 180,
-            initialValue: 180
-        },
-        audio: {
-            context: window.AudioContext ? new window.AudioContext() : null
-        },
-        confetti: {
-            system: null,
-            instances: [],
-            timeoutId: null,
-            isRunning: false
-        },
-        slotAnimationInterval: null
+        players: [],
+        currentPhase: null,
+        timer: { interval: null, remainingTime: 180, initialValue: 180 },
+        audio: { context: window.AudioContext ? new window.AudioContext() : null },
+        confetti: { animationFrame: null, particles: [] },
+        phaseConfig: {
+            bomberman: { next: 'marioKart', btn: DOM.drawMarioKartBtn },
+            marioKart: { next: 'streetFighter', btn: DOM.drawStreetFighterBtn },
+            streetFighter: { next: 'final', btn: null },
+        }
     };
 
     const Config = {
         MAX_PARTICIPANTS: 30,
-        HALL_KEY: 'retro_tourney_champion_v1'
+        CHAMPION_KEY: 'retro_tech_champion',
+        PARTICIPANTS_KEY: 'retro_tech_participants',
+        CONFETTI_DURATION: 5000,
+        CONFETTI_PARTICLES: 150
     };
 
+    // ===================================================================
+    // MÓDULOS DE FUNCIONALIDADE
+    // ===================================================================
 
     const AudioVisuals = {
-        playSound: (soundId) => {
-            const audioEl = DOM[soundId];
+        playSound(soundId) {
+            const audioEl = DOM.sfx[soundId];
             if (audioEl) {
                 audioEl.currentTime = 0;
-                audioEl.play().catch(e => console.error(`Erro ao tocar o som (${soundId}):`, e));
+                audioEl.play().catch(e => console.error(`Error playing sound (${soundId}):`, e));
             }
         },
-
-        initConfetti: () => {
-            if (!DOM.confettiCanvas) return;
-            const ctxConf = DOM.confettiCanvas.getContext('2d');
-
-            const resizeCanvas = () => {
-                DOM.confettiCanvas.width = window.innerWidth;
-                DOM.confettiCanvas.height = window.innerHeight;
-            };
-            window.addEventListener('resize', resizeCanvas);
-            resizeCanvas();
-
-            const launch = () => {
-                State.confetti.instances = Array.from({ length: 200 }, () => ({
-                    x: Math.random() * DOM.confettiCanvas.width,
-                    y: Math.random() * DOM.confettiCanvas.height - DOM.confettiCanvas.height,
-                    radius: 4 + Math.random() * 4,
-                    color: `hsl(${Math.random() * 360}, 100%, 60%)`,
-                    velocity: 2 + Math.random() * 3
-                }));
-
-                if (State.confetti.timeoutId) clearTimeout(State.confetti.timeoutId);
-                if (!State.confetti.isRunning) {
-                    State.confetti.isRunning = true;
-                    drawConfetti();
-                }
-                State.confetti.timeoutId = setTimeout(() => {
-                    State.confetti.instances = [];
-                }, 5000);
-            };
-
-            const drawConfetti = () => {
-                if (!ctxConf) return;
-                ctxConf.clearRect(0, 0, DOM.confettiCanvas.width, DOM.confettiCanvas.height);
-
-                State.confetti.instances.forEach(p => {
-                    ctxConf.beginPath();
-                    ctxConf.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                    ctxConf.fillStyle = p.color;
-                    ctxConf.fill();
-                    p.y += p.velocity;
-                    if (p.y > DOM.confettiCanvas.height) p.y = -10;
-                });
-
-                if (State.confetti.instances.length > 0) {
-                    requestAnimationFrame(drawConfetti);
-                } else {
-                    State.confetti.isRunning = false;
-                    ctxConf.clearRect(0, 0, DOM.confettiCanvas.width, DOM.confettiCanvas.height);
-                }
-            };
-            return { launch };
-        },
-
-        toggleMusic: () => {
+        toggleMusic() {
             if (State.audio.context && State.audio.context.state === 'suspended') {
                 State.audio.context.resume();
             }
             if (DOM.bgMusic.paused) {
-                DOM.bgMusic.volume = 0.50;
-                DOM.bgMusic.play().catch(e => console.error("Erro ao tocar a música:", e));
+                DOM.bgMusic.volume = 0.3;
+                DOM.bgMusic.play().catch(e => console.error("Error playing music:", e));
                 DOM.musicControl.textContent = '🎵';
             } else {
                 DOM.bgMusic.pause();
                 DOM.musicControl.textContent = '🔇';
             }
-        }
-    };
-
-    State.confetti.system = AudioVisuals.initConfetti();
-
-
-    const HallOfFame = {
-        load: () => {
-            const champ = localStorage.getItem(Config.HALL_KEY);
-            DOM.champNameEl.textContent = champ || '— Nenhum ainda —';
         },
-        save: (name) => {
-            if (!name) return;
-            localStorage.setItem(Config.HALL_KEY, name);
-            DOM.champNameEl.textContent = name;
-            Utils.flashElement(DOM.champNameEl);
-        },
-        clear: () => {
-            localStorage.removeItem(Config.HALL_KEY);
-            DOM.champNameEl.textContent = '— Nenhum ainda —';
-        }
-    };
+        launchConfetti() {
+            const canvas = DOM.confettiCanvas;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
 
+            const colors = ["#ff4da6", "#33ccff", "#9d5cff", "#ffd700", "#c0c0c0"];
+            State.confetti.particles = [];
 
-    const Tournament = {
-        renderPairs: (list) => {
-            DOM.pairsContainer.innerHTML = '';
-            if (list.length === 0) {
-                DOM.pairsContainer.innerHTML = `<div style="color:var(--muted)">Sem participantes.</div>`;
-                return;
-            }
-
-            State.pairs.forEach((p, index) => {
-                const card = document.createElement('div');
-                card.className = 'pair-card';
-                card.innerHTML = `
-                    <div class="player">${p[0] ?? '—'}</div>
-                    <div class="player vs">VS</div>
-                    <div class="player">${p[1] ?? '—'}</div>
-                `;
-                DOM.pairsContainer.appendChild(card);
-                card.animate([{ transform: 'translateY(6px)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 300, delay: index * 30 });
-            });
-        },
-
-        animatePairs: (duration) => {
-            const players = State.participants.length > 0 ? State.participants : Array.from({ length: 4 }, () => `JOGADOR ${Math.floor(Math.random() * 100)}`);
-            DOM.pairsContainer.innerHTML = '';
-            const numPairs = Math.ceil(players.length / 2);
-
-            for (let i = 0; i < numPairs; i++) {
-                const card = document.createElement('div');
-                card.className = 'pair-card';
-                card.innerHTML = `
-                    <div class="player slot-spin">???</div>
-                    <div class="player vs">VS</div>
-                    <div class="player slot-spin">???</div>
-                `;
-                DOM.pairsContainer.appendChild(card);
-            }
-
-            const slotSpins = document.querySelectorAll('.slot-spin');
-            State.slotAnimationInterval = setInterval(() => {
-                slotSpins.forEach(el => el.textContent = players[Math.floor(Math.random() * players.length)] || '???');
-            }, 100);
-
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    clearInterval(State.slotAnimationInterval);
-                    State.slotAnimationInterval = null;
-                    resolve();
-                }, duration);
-            });
-        },
-
-        createBracket: (n) => {
-            if (!DOM.bracketContainer) return;
-            DOM.bracketContainer.innerHTML = '';
-            let powerOfTwo = 1;
-            while (powerOfTwo < n) {
-                powerOfTwo *= 2;
-            }
-            const rounds = Math.ceil(Math.log2(powerOfTwo));
-            let matchesInRound = powerOfTwo / 2;
-
-            for (let r = 0; r < rounds; r++) {
-                const roundEl = document.createElement('div');
-                roundEl.className = 'round';
-                roundEl.innerHTML = `<h3>Rodada ${r + 1}</h3>`;
-                for (let m = 0; m < matchesInRound; m++) {
-                    roundEl.innerHTML += `
-                        <div class="match">
-                            <div class="teams">
-                                <div class="team team-a">—</div>
-                                <div class="team team-b">—</div>
-                            </div>
-                            <div class="match-controls">
-                                <button class="btn btn-win advance-btn set-a">Venceu</button>
-                                <button class="btn btn-win advance-btn set-b">Venceu</button>
-                            </div>
-                        </div>`;
-                }
-                DOM.bracketContainer.appendChild(roundEl);
-                matchesInRound = Math.floor(matchesInRound / 2);
-            }
-        },
-
-        fillFirstRound: (list) => {
-            const matches = Array.from(DOM.bracketContainer.querySelectorAll('.round:first-child .match'));
-            const shuffledList = [...list];
-            Utils.shuffleArray(shuffledList);
-            const numPlayers = shuffledList.length;
-
-            let powerOfTwo = 1;
-            while (powerOfTwo < numPlayers) {
-                powerOfTwo *= 2;
-            }
-
-            const numByes = powerOfTwo - numPlayers;
-            const playersAndByes = [...shuffledList];
-            for (let i = 0; i < numByes; i++) {
-                playersAndByes.push('— (bye)');
-            }
-            Utils.shuffleArray(playersAndByes);
-            const firstRoundMatches = matches.length;
-
-            for (let i = 0; i < firstRoundMatches; i++) {
-                const match = matches[i];
-                const playerA = playersAndByes[i * 2] || '—';
-                const playerB = playersAndByes[i * 2 + 1] || '—';
-
-                match.querySelector('.team-a').textContent = playerA;
-                match.querySelector('.team-b').textContent = playerB;
-                match.querySelectorAll('.team').forEach(t => t.classList.remove('winner'));
-            }
-        },
-
-        setupBracketHandlers: () => {
-            const allRounds = Array.from(DOM.bracketContainer.querySelectorAll('.round')).map(r => Array.from(r.querySelectorAll('.match')));
-            allRounds.forEach((roundMatches, roundIndex) => {
-                const nextRoundMatches = allRounds[roundIndex + 1];
-                roundMatches.forEach((matchEl, matchIndex) => {
-                    const advanceWinner = (winnerSide) => {
-                        const winnerEl = matchEl.querySelector(`.team-${winnerSide}`);
-                        const winnerName = winnerEl.textContent.trim();
-                        if (!winnerName || winnerName === '—' || winnerName.includes('(bye)')) {
-                            if (winnerName.includes('(bye)')) {
-                                const opponentSide = winnerSide === 'a' ? 'b' : 'a';
-                                const opponentEl = matchEl.querySelector(`.team-${opponentSide}`);
-                                const opponentName = opponentEl.textContent.trim();
-                                if (!opponentName.includes('(bye)') && opponentName !== '—') {
-                                    if (nextRoundMatches) {
-                                        const nextMatchIndex = Math.floor(matchIndex / 2);
-                                        const nextTeamEl = nextRoundMatches[nextMatchIndex].querySelector(matchIndex % 2 === 0 ? '.team-a' : '.team-b');
-                                        nextTeamEl.textContent = opponentName;
-                                        Utils.flashElement(nextTeamEl.closest('.match'));
-                                    } else {
-                                        Tournament.finalizeChampion(opponentName);
-                                    }
-                                }
-                                return;
-                            }
-                            return;
-                        }
-
-                        matchEl.querySelectorAll('.team').forEach(t => t.classList.remove('winner'));
-                        winnerEl.classList.add('winner');
-                        AudioVisuals.playSound('sfxWin');
-
-                        if (nextRoundMatches) {
-                            const nextMatchIndex = Math.floor(matchIndex / 2);
-                            const nextTeamEl = nextRoundMatches[nextMatchIndex].querySelector(matchIndex % 2 === 0 ? '.team-a' : '.team-b');
-                            nextTeamEl.textContent = winnerName;
-                            Utils.flashElement(nextTeamEl.closest('.match'));
-                            nextTeamEl.classList.remove('winner');
-                        } else {
-                            Tournament.finalizeChampion(winnerName);
-                        }
-                    };
-
-                    matchEl.querySelector('.set-a').onclick = () => advanceWinner('a');
-                    matchEl.querySelector('.set-b').onclick = () => advanceWinner('b');
-
-                    matchEl.querySelectorAll('.team').forEach(el => {
-                        el.onclick = () => {
-                            const currentName = el.textContent;
-                            const newName = prompt('Editar nome:', currentName === '—' ? '' : currentName);
-                            if (newName === null) return;
-                            el.textContent = newName.trim() || '—';
-                            el.classList.remove('winner');
-                        };
-                    });
+            for (let i = 0; i < Config.CONFETTI_PARTICLES; i++) {
+                State.confetti.particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    radius: Math.random() * 2 + 1,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    velocity: { x: Math.random() * 2 - 1, y: Math.random() * 5 + 2 }
                 });
-            });
-        },
+            }
 
-        finalizeChampion: (name) => {
-            if (!name || !confirm(`Definir "${name}" como campeão?`)) return;
-            HallOfFame.save(name);
-            AudioVisuals.playSound('sfxWin');
-            State.confetti.system.launch();
+            const animate = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                State.confetti.particles.forEach(p => {
+                    p.y += p.velocity.y;
+                    p.x += p.velocity.x;
+                    ctx.beginPath();
+                    ctx.fillStyle = p.color;
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                State.confetti.animationFrame = requestAnimationFrame(animate);
+            };
+
+            if (State.confetti.animationFrame) {
+                cancelAnimationFrame(State.confetti.animationFrame);
+            }
+            animate();
+
+            setTimeout(() => {
+                cancelAnimationFrame(State.confetti.animationFrame);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }, Config.CONFETTI_DURATION);
+        },
+        showNotification(message, duration = 3000) {
+            DOM.notificationOverlay.querySelector('#notification-box').textContent = message;
+            DOM.notificationOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                DOM.notificationOverlay.classList.add('hidden');
+            }, duration);
         }
     };
-
 
     const Timer = {
-        updateDisplay: () => {
+        updateDisplay() {
             DOM.timerDigits.textContent = Utils.formatTime(State.timer.remainingTime);
-            DOM.timerDigits.style.animation = (State.timer.remainingTime > 0 && State.timer.remainingTime <= 10) ? 'blink 1s steps(1, end) infinite' : 'none';
         },
-        start: () => {
+        start() {
             if (State.timer.interval) return;
-            const timeToStart = State.timer.remainingTime <= 0 ? Utils.parseTime(DOM.timerDigits.textContent) : State.timer.remainingTime;
-            if (timeToStart <= 0) return;
-
             DOM.timerDigits.contentEditable = false;
-            DOM.startTimerBtn.textContent = 'Continuar';
-            AudioVisuals.playSound('sfxStart');
-
+            AudioVisuals.playSound('start');
             State.timer.interval = setInterval(() => {
                 State.timer.remainingTime--;
-                Timer.updateDisplay();
+                this.updateDisplay();
                 if (State.timer.remainingTime <= 0) {
-                    Timer.stop(true);
+                    this.stop(true);
                 }
             }, 1000);
         },
-        pause: () => {
-            if (State.timer.interval) {
-                clearInterval(State.timer.interval);
-                State.timer.interval = null;
-                DOM.startTimerBtn.textContent = 'Continuar';
-                DOM.timerDigits.contentEditable = true;
-            }
-        },
-        reset: () => {
+        pause() {
             clearInterval(State.timer.interval);
             State.timer.interval = null;
+            DOM.timerDigits.contentEditable = true;
+        },
+        reset() {
+            this.pause();
             State.timer.remainingTime = State.timer.initialValue;
-            Timer.updateDisplay();
-            DOM.startTimerBtn.textContent = 'Iniciar';
-            DOM.timerDigits.contentEditable = true;
+            this.updateDisplay();
         },
-        stop: (playFailSound = false) => {
-            clearInterval(State.timer.interval);
-            State.timer.interval = null;
+        stop(playFailSound = false) {
+            this.pause();
             State.timer.remainingTime = 0;
-            Timer.updateDisplay();
+            this.updateDisplay();
             if (playFailSound) {
-                AudioVisuals.playSound('sfxFail');
-                setTimeout(() => alert('Tempo esgotado!'), 100);
+                AudioVisuals.playSound('fail');
+                AudioVisuals.showNotification('Tempo Esgotado!');
             }
-            DOM.timerDigits.contentEditable = true;
-            DOM.startTimerBtn.textContent = 'Iniciar';
         }
     };
 
+    const ChampionMemorial = {
+        save(name) {
+            localStorage.setItem(Config.CHAMPION_KEY, name);
+            this.load();
+        },
+        load() {
+            const championName = localStorage.getItem(Config.CHAMPION_KEY);
+            if (championName) {
+                DOM.championMemorialEl.classList.remove('hidden');
+                DOM.memorialChampNameEl.textContent = championName;
+            } else {
+                DOM.championMemorialEl.classList.add('hidden');
+            }
+        },
+        clear() {
+            if (confirm('Isso irá apagar o campeão atual do memorial. Deseja continuar?')) {
+                localStorage.removeItem(Config.CHAMPION_KEY);
+                this.load();
+            }
+        }
+    };
+
+    const ParticipantManager = {
+        save() {
+            localStorage.setItem(Config.PARTICIPANTS_KEY, DOM.namesInput.value);
+        },
+        load() {
+            const names = localStorage.getItem(Config.PARTICIPANTS_KEY);
+            if (names) {
+                DOM.namesInput.value = names;
+            }
+        },
+        clear() {
+            localStorage.removeItem(Config.PARTICIPANTS_KEY);
+            DOM.namesInput.value = '';
+        }
+    };
+
+    const Tournament = {
+        initialize() {
+            const rawNames = DOM.namesInput.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+            if (rawNames.length < 2) {
+                return alert('São necessários pelo menos 2 jogadores.');
+            }
+
+            if (rawNames.length % 2 !== 0) {
+                return alert('O número de jogadores é ímpar. Por favor, adicione mais um jogador para continuar.');
+            }
+
+            AudioVisuals.playSound('start');
+            State.players = rawNames.slice(0, Config.MAX_PARTICIPANTS).map(name => ({
+                name, totalScore: 0, bombermanPts: 0, marioKartPts: 0, sfPts: 0, wins: 0
+            }));
+
+            DOM.setupPhaseEl.classList.add('hidden');
+            DOM.tournamentControlsEl.classList.remove('hidden');
+            this.updateLeaderboard();
+        },
+
+        editNames() {
+            DOM.setupPhaseEl.classList.remove('hidden');
+            DOM.tournamentControlsEl.classList.add('hidden');
+        },
+
+        updateLeaderboard() {
+            State.players.sort((a, b) => b.totalScore - a.totalScore || b.wins - a.wins || b.sfPts - a.sfPts);
+            DOM.leaderboardList.innerHTML = State.players.map(p =>
+                `<li><span>${p.name}</span> <span class="neon">${p.totalScore} pts</span></li>`
+            ).join('') || '<li>— Aguardando jogadores —</li>';
+        },
+
+        generateRounds(phase) {
+            State.currentPhase = phase;
+            const shuffled = Utils.shuffleArray([...State.players]);
+            let rounds = [];
+
+            if (phase === 'bomberman') {
+                for (let i = 0; i < shuffled.length;) {
+                    const remaining = shuffled.length - i;
+                    const groupSize = (remaining <= 3 || remaining === 5) ? 3 : 4;
+                    rounds.push(shuffled.slice(i, i + groupSize));
+                    i += groupSize;
+                }
+            } else {
+                for (let i = 0; i < shuffled.length; i += 2) {
+                    rounds.push(shuffled.slice(i, i + 2));
+                }
+            }
+            this.renderRounds(phase, rounds);
+            DOM[`draw${phase.charAt(0).toUpperCase() + phase.slice(1)}Btn`].disabled = true;
+        },
+
+        renderRounds(phase, rounds) {
+            DOM.roundsContainer.innerHTML = '';
+            const existingTitle = DOM.roundsContainer.parentElement.querySelector('.rounds-title');
+            if (existingTitle) existingTitle.remove();
+
+            const titleEl = document.createElement('h3');
+            titleEl.className = 'rounds-title';
+            titleEl.textContent = `Rodadas: ${phase.replace(/^\w/, c => c.toUpperCase())}`;
+            DOM.roundsContainer.before(titleEl);
+
+            rounds.forEach((round) => {
+                const card = document.createElement('div');
+                card.className = 'round-card';
+                card.dataset.completed = "false";
+
+                let playersHtml = '';
+                if (phase === 'bomberman') {
+                    playersHtml = round.map(p => `
+                        <div class="player-entry" data-player-name="${p.name}">
+                            <span class="player-name">${p.name}</span>
+                            <div class="player-score-controls">
+                                <button class="score-btn pos-1" data-pos="1">🥇</button>
+                                <button class="score-btn pos-2" data-pos="2">🥈</button>
+                                <button class="score-btn pos-3" data-pos="3">🥉</button>
+                                ${round.length === 4 ? '<button class="score-btn pos-4" data-pos="4">🟨</button>' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    playersHtml = round.map(p => `<div class="player-name">${p.name}</div>`).join('<div class="vs">VS</div>');
+                    const controls = round.length === 2 ? `
+                        <div class="controls round-controls">
+                            <button class="btn" data-winner="${round[0].name}">${round[0].name.split(' ')[0]} Venceu</button>
+                            <button class="btn" data-winner="${round[1].name}">${round[1].name.split(' ')[0]} Venceu</button>
+                        </div>
+                    ` : '';
+                    playersHtml += controls;
+                }
+                card.innerHTML = playersHtml;
+                DOM.roundsContainer.appendChild(card);
+            });
+        },
+
+        assignBombermanResult(roundEl, playerName, position) {
+            const points = { 1: 6, 2: 4, 3: 2, 4: 1 };
+            const player = State.players.find(p => p.name === playerName);
+
+            if (!player || player.bombermanPts > 0) return;
+
+            player.bombermanPts = points[position];
+            player.totalScore += points[position];
+            if (position === 1) player.wins++;
+
+            this.updateLeaderboard();
+
+            const clickedButton = roundEl.querySelector(`[data-player-name="${playerName}"] .score-btn[data-pos="${position}"]`);
+            if (clickedButton) clickedButton.classList.add('selected');
+
+            const allPlayerRows = roundEl.querySelectorAll('.player-entry');
+            allPlayerRows.forEach(row => {
+                const rowPlayerName = row.dataset.playerName;
+                if (rowPlayerName === playerName) {
+                    row.querySelectorAll('.score-btn').forEach(btn => btn.disabled = true);
+                } else {
+                    const positionButton = row.querySelector(`.score-btn[data-pos="${position}"]`);
+                    if (positionButton) positionButton.disabled = true;
+                }
+            });
+
+            const allButtonsInCard = roundEl.querySelectorAll('.score-btn');
+            const allDisabled = [...allButtonsInCard].every(btn => btn.disabled);
+            if (allDisabled) {
+                roundEl.dataset.completed = "true";
+                AudioVisuals.playSound('win');
+            }
+
+            this.checkPhaseCompletion();
+        },
+
+        assign1v1Winner(cardEl, winnerName) {
+            const roundPlayers = Array.from(cardEl.querySelectorAll('[data-winner]')).map(el => el.dataset.winner);
+            const loserName = roundPlayers.find(name => name !== winnerName);
+
+            const winner = State.players.find(p => p.name === winnerName);
+            const loser = loserName ? State.players.find(p => p.name === loserName) : null;
+
+            const points = State.currentPhase === 'marioKart' ? { w: 7, l: 3 } : { w: 8, l: 4 };
+            const field = State.currentPhase === 'marioKart' ? 'marioKartPts' : 'sfPts';
+
+            if (winner[field] > 0 || (loser && loser[field] > 0)) return alert('Este confronto já foi decidido.');
+
+            winner[field] = points.w;
+            winner.totalScore += points.w;
+            winner.wins++;
+            if (loser) {
+                loser[field] = points.l;
+                loser.totalScore += points.l;
+            }
+
+            this.updateLeaderboard();
+
+            AudioVisuals.playSound('win');
+            cardEl.querySelectorAll('.btn').forEach(b => b.disabled = true);
+            cardEl.dataset.completed = "true";
+            this.checkPhaseCompletion();
+        },
+
+        checkPhaseCompletion() {
+            const allRoundsCompleted = ![...DOM.roundsContainer.querySelectorAll('.round-card')].some(c => c.dataset.completed === "false");
+
+            if (allRoundsCompleted) {
+                const nextPhaseData = State.phaseConfig[State.currentPhase];
+                if (nextPhaseData.btn) {
+                    nextPhaseData.btn.disabled = false;
+                    alert(`Fase ${State.currentPhase} concluída! Próxima fase: ${nextPhaseData.next}`);
+                } else {
+                    this.showFinalists();
+                }
+            }
+        },
+
+        showFinalists() {
+            DOM.tournamentControlsEl.classList.add('hidden');
+            DOM.finalSectionEl.classList.remove('hidden');
+            const [finalist1, finalist2] = State.players;
+            DOM.finalist1El.textContent = finalist1.name;
+            DOM.finalist2El.textContent = finalist2 ? finalist2.name : 'Vaga Aberta';
+        },
+
+        declareChampion() {
+            const finalists = [DOM.finalist1El.textContent, DOM.finalist2El.textContent];
+            let winnerName = prompt(`Quem é o campeão?\n1: ${finalists[0]}\n2: ${finalists[1]}`);
+
+            let selectedWinner;
+            if (winnerName === '1' || winnerName?.toLowerCase() === finalists[0].toLowerCase()) {
+                selectedWinner = finalists[0];
+            } else if (winnerName === '2' || winnerName?.toLowerCase() === finalists[1].toLowerCase()) {
+                selectedWinner = finalists[1];
+            } else {
+                return alert("Seleção inválida.");
+            }
+
+            ChampionMemorial.save(selectedWinner);
+            Utils.flashElement(DOM.memorialChampNameEl);
+            AudioVisuals.playSound('win');
+            AudioVisuals.launchConfetti();
+            DOM.finalSectionEl.classList.add('hidden');
+        },
+
+        reset() {
+            if (confirm('Tem certeza que deseja limpar todos os nomes e reiniciar o torneio?')) {
+                ParticipantManager.clear();
+                State.players = [];
+                State.currentPhase = null;
+                DOM.setupPhaseEl.classList.remove('hidden');
+                DOM.tournamentControlsEl.classList.add('hidden');
+                DOM.leaderboardList.innerHTML = '<li>— Aguardando jogadores —</li>';
+                DOM.roundsContainer.innerHTML = '<p class="muted">Aguardando sorteio de fase...</p>';
+                const existingTitle = document.querySelector('.rounds-title');
+                if (existingTitle) existingTitle.remove();
+                DOM.drawBombermanBtn.disabled = false;
+                DOM.drawMarioKartBtn.disabled = true;
+                DOM.drawStreetFighterBtn.disabled = true;
+                DOM.finalSectionEl.classList.add('hidden');
+            }
+        }
+    };
+
+    // ===================================================================
+    // INICIALIZAÇÃO E EVENT LISTENERS
+    // ===================================================================
+
     const setupEventListeners = () => {
-        document.body.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.closest('.btn')) {
-                AudioVisuals.playSound('sfxClick');
+        // Participantes e Torneio
+        DOM.namesInput.addEventListener('input', ParticipantManager.save);
+        DOM.startTournamentBtn.addEventListener('click', () => Tournament.initialize());
+        DOM.clearBtn.addEventListener('click', () => Tournament.reset());
+        DOM.editNamesBtn.addEventListener('click', () => Tournament.editNames());
+
+        // Modal de Regras
+        DOM.rulesBtn.addEventListener('click', () => DOM.rulesModal.classList.remove('hidden'));
+        DOM.closeRulesBtn.addEventListener('click', () => DOM.rulesModal.classList.add('hidden'));
+        DOM.rulesModal.addEventListener('click', (e) => {
+            if (e.target === DOM.rulesModal) {
+                DOM.rulesModal.classList.add('hidden');
             }
         });
-        DOM.musicControl.addEventListener('click', AudioVisuals.toggleMusic);
-        DOM.shuffleBtn.addEventListener('click', async () => {
-            const rawNames = DOM.namesInput.value.split('\n').map(s => s.trim()).filter(Boolean);
-            if (rawNames.length === 0) {
-                alert('Por favor, insira pelo menos um nome.');
+
+        // Fases
+        DOM.drawBombermanBtn.addEventListener('click', () => Tournament.generateRounds('bomberman'));
+        DOM.drawMarioKartBtn.addEventListener('click', () => Tournament.generateRounds('marioKart'));
+        DOM.drawStreetFighterBtn.addEventListener('click', () => Tournament.generateRounds('streetFighter'));
+
+        // Final
+        DOM.declareWinnerBtn.addEventListener('click', () => Tournament.declareChampion());
+        DOM.clearChampionBtn.addEventListener('click', () => ChampionMemorial.clear());
+
+        // Rodadas (Delegação de evento)
+        DOM.roundsContainer.addEventListener('click', (e) => {
+            const scoreBtn = e.target.closest('.score-btn');
+            if (scoreBtn) {
+                const roundEl = scoreBtn.closest('.round-card');
+                const playerName = scoreBtn.closest('.player-entry').dataset.playerName;
+                const position = parseInt(scoreBtn.dataset.pos, 10);
+                Tournament.assignBombermanResult(roundEl, playerName, position);
                 return;
             }
 
-            DOM.shuffleBtn.classList.add('shuffle-active');
-            document.body.classList.add('flicker-animation');
-            AudioVisuals.playSound('sfxStart');
-            State.participants = rawNames.length > Config.MAX_PARTICIPANTS ? rawNames.slice(0, Config.MAX_PARTICIPANTS) : [...rawNames];
-            await Tournament.animatePairs(2000);
-            Utils.shuffleArray(State.participants);
-            State.pairs = [];
-            let powerOfTwo = 1;
-            while (powerOfTwo < State.participants.length) {
-                powerOfTwo *= 2;
-            }
-            const numByes = powerOfTwo - State.participants.length;
-
-            const participantsWithByes = [...State.participants];
-            for (let i = 0; i < numByes; i++) {
-                participantsWithByes.push('— (bye)');
-            }
-            Utils.shuffleArray(participantsWithByes);
-
-            for (let i = 0; i < participantsWithByes.length; i += 2) {
-                State.pairs.push([participantsWithByes[i], participantsWithByes[i + 1] ?? '— (bye)']);
-            }
-
-            Tournament.renderPairs(State.pairs);
-            Tournament.createBracket(State.participants.length);
-            Tournament.fillFirstRound(State.participants);
-            Tournament.setupBracketHandlers();
-            DOM.shuffleBtn.classList.remove('shuffle-active');
-            document.body.classList.remove('flicker-animation');
-        });
-        DOM.clearBtn.addEventListener('click', () => {
-            DOM.namesInput.value = '';
-            State.participants = [];
-            State.pairs = [];
-            Tournament.renderPairs([]);
-            if (DOM.bracketContainer) {
-                DOM.bracketContainer.innerHTML = '';
+            const winnerBtn = e.target.closest('[data-winner]');
+            if (winnerBtn) {
+                const cardEl = winnerBtn.closest('.round-card');
+                Tournament.assign1v1Winner(cardEl, winnerBtn.dataset.winner);
             }
         });
 
-        DOM.startTimerBtn.addEventListener('click', Timer.start);
-        DOM.pauseTimerBtn.addEventListener('click', Timer.pause);
-        DOM.resetTimerBtn.addEventListener('click', Timer.reset);
+        // Timer
+        DOM.startTimerBtn.addEventListener('click', () => Timer.start());
+        DOM.pauseTimerBtn.addEventListener('click', () => Timer.pause());
+        DOM.resetTimerBtn.addEventListener('click', () => Timer.reset());
         DOM.timerDigits.addEventListener('blur', () => {
-            State.timer.remainingTime = Utils.parseTime(DOM.timerDigits.textContent);
-            Timer.updateDisplay();
-        });
-        DOM.timerDigits.addEventListener('focus', () => {
-            if (State.timer.interval) {
-                Timer.pause();
-            }
+            State.timer.initialValue = Utils.parseTime(DOM.timerDigits.textContent);
+            Timer.reset();
         });
 
-        DOM.clearHallBtn.addEventListener('click', HallOfFame.clear);
-
-        DOM.namesInput.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                DOM.shuffleBtn.click();
-            }
-        });
-
-        DOM.themeButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const theme = button.dataset.theme;
-                Utils.setBodyClass(`theme-${theme}`);
-            });
-        });
-
+        // UI e Misc
+        DOM.musicControl.addEventListener('click', AudioVisuals.toggleMusic);
+        DOM.themeButtons.forEach(button => button.addEventListener('click', () => Utils.setBodyClass(`theme-${button.dataset.theme}`)));
         DOM.streamerModeBtn.addEventListener('click', () => {
             document.body.classList.toggle('streamer-mode');
             const inStreamerMode = document.body.classList.contains('streamer-mode');
             DOM.streamerModeBtn.textContent = inStreamerMode ? 'Sair do Modo' : 'Modo Transmissão';
         });
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('.btn') && !e.target.closest('#music-control')) AudioVisuals.playSound('click');
+        });
     };
+
     const init = () => {
         setupEventListeners();
-        HallOfFame.load();
         Timer.updateDisplay();
-        Tournament.renderPairs([]);
-        const champObserver = new MutationObserver(() => {
-            DOM.champNameEl.setAttribute('aria-live', 'polite');
-        });
-        champObserver.observe(DOM.champNameEl, { childList: true });
+        ChampionMemorial.load();
+        ParticipantManager.load();
     };
 
     init();
-
 })();

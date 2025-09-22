@@ -19,12 +19,24 @@
         </div>
         <div class="meta">
             <div>📅 <strong>23/10/2025 às 20:40</strong></div>
-            <div>👥 <strong>30 participantes (máx)</strong></div>
+            <div>👥 <strong>20 participantes (máx)</strong></div>
             <div>🏫 <strong>IFC - Campus Brusque</strong></div>
         </div>
         <button id="streamerModeBtn" class="btn neon-btn">Modo Transmissão</button>
     </header>
+
     <main class="container">
+        <section class="quick-actions">
+            <button id="rulesBtn" class="btn">📜 Regras/Organização</button>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSdSQlPKxfAxzR3KTZ7diO-wJDzhK8rq8gSLdUzyDvE7TExFJQ/viewform?usp=dialog"
+                target="_blank" class="btn neon-btn">🚀 Inscrição</a>
+        </section>
+
+        <section id="championMemorial" class="card hidden">
+            <span>🏆 Campeão Atual:</span>
+            <span id="memorialChampName" class="neon"></span>
+        </section>
+
         <section class="card theme-switcher">
             <h2>Mudar Tema</h2>
             <div class="controls">
@@ -44,14 +56,13 @@
                         Texeira</span></p>
             </div>
         </section>
+
         <section class="card bottom-row">
-            <div class="hall fame-card">
-                <h2>Hall da Fama</h2>
-                <div class="champ-box">
-                    <div class="champ-title">Campeão</div>
-                    <div id="champName" class="champ-name">— Nenhum ainda —</div>
-                </div>
-                <button id="clearHall" class="btn">Limpar Hall</button>
+            <div id="leaderboard" class="fame-card">
+                <h2>🏆 Placar de Líderes</h2>
+                <ol id="leaderboardList">
+                    <li>— Aguardando jogadores —</li>
+                </ol>
             </div>
             <div class="timer-card">
                 <h2>Cronômetro de Partida</h2>
@@ -73,43 +84,22 @@
                     <div class="game-info">
                         <span class="game-phase">🟢 Fase 1 — Quebra-gelo</span>
                         <h3 class="game-title">Bomberman</h3>
-                        <ul class="game-rules-list">
-                            <li>Formato: Arena multiplayer (2 a 4 jogadores)</li>
-                            <li>Modo de jogo: Batalha clássica</li>
-                            <li>Power-ups: Permitidos</li>
-                            <li>Critério de vitória: Último sobrevivente vence</li>
-                        </ul>
                     </div>
                     <img src="https://bdjogos.com.br/capas/22920-bomberman-party-edition-playstation-capa-1.jpg"
                         alt="Bomberman" class="game-img">
                 </div>
-
                 <div class="game-card">
                     <div class="game-info">
                         <span class="game-phase">🟡 Fase 2 — Corrida maluca</span>
                         <h3 class="game-title">Super Mario Kart</h3>
-                        <ul class="game-rules-list">
-                            <li>Formato: Corrida individual</li>
-                            <li>Pista: sorteada</li>
-                            <li>Voltas: 3 voltas</li>
-                            <li>Itens: Permitidos</li>
-                            <li>Critério de vitória: Quem fizer as 3 voltas primeiro</li>
-                        </ul>
                     </div>
                     <img src="https://upload.wikimedia.org/wikipedia/pt/d/db/Mario_Kart_Super_Circuit_capa.jpg"
                         alt="Super Mario Kart" class="game-img">
                 </div>
-
                 <div class="game-card">
                     <div class="game-info">
                         <span class="game-phase">🔴 Fase 3 — Batalha de gigantes</span>
                         <h3 class="game-title">Street Fighter II</h3>
-                        <ul class="game-rules-list">
-                            <li>Formato: 1 X 1</li>
-                            <li>Partida: Melhor de 3 rounds</li>
-                            <li>Tempo por round: 1 minuto</li>
-                            <li>Personagens: Livres</li>
-                        </ul>
                     </div>
                     <img src="https://bdjogos.com.br/capas/19855-street-fighter-ii-game-boy-capa-1.jpg"
                         alt="Street Fighter II" class="game-img">
@@ -117,29 +107,195 @@
             </div>
         </section>
 
-        <section class="card" id="sorteo-section">
-            <h2>Sistema de Sorteio de Confrontos</h2>
-            <p>Insira até <strong>30</strong> nomes — 1 por linha.</p>
-            <textarea id="namesInput" placeholder="Nome do jogador 1&#10;Nome do jogador 2&#10;..."></textarea>
-            <div class="controls">
-                <button id="shuffleBtn" class="btn neon-btn">Sortear Duplas</button>
-                <button id="clearBtn" class="btn">Limpar</button>
+        <section class="card" id="tournament-manager">
+            <h2>Gerenciamento do Torneio</h2>
+            <div id="setup-phase">
+                <p>Insira os nomes (salvos automaticamente):</p>
+                <textarea id="namesInput" placeholder="Nome do jogador 1&#10;Nome do jogador 2&#10;..."></textarea>
+                <div class="controls setup-controls">
+                    <button id="startTournamentBtn" class="btn neon-btn">Iniciar Torneio</button>
+                    <button id="clearBtn" class="btn">Limpar & Resetar</button>
+                </div>
             </div>
-            <div id="pairsContainer" class="pairs-grid" aria-live="polite"></div>
+            <div id="tournament-controls" class="hidden">
+                <div class="controls tournament-top-controls">
+                    <h3>Sorteio de Fases:</h3>
+                    <button id="editNamesBtn" class="btn">Editar Nomes</button>
+                </div>
+                <div class="controls phase-controls">
+                    <button id="drawBomberman" class="btn phase-btn">Fase 1: Bomberman</button>
+                    <button id="drawMarioKart" class="btn phase-btn" disabled>Fase 2: Mario Kart</button>
+                    <button id="drawStreetFighter" class="btn phase-btn" disabled>Fase 3: Street Fighter</button>
+                </div>
+                <hr>
+                <div id="roundsContainer" class="rounds-grid" aria-live="polite">
+                    <p class="muted">Aguardando sorteio de fase...</p>
+                </div>
+            </div>
         </section>
-        <section class="card bracket">
-            <h2>Chaveamento do Torneio</h2>
-            <p class="muted">Os rounds são gerados automaticamente conforme o número de participantes.</p>
-            <div id="bracketContainer" class="bracket-wrap"></div>
+
+        <section id="final-section" class="card hidden">
+            <h2>🏁 Grande Final 🏁</h2>
+            <p class="muted">Os dois melhores pontuadores avançam!</p>
+            <div class="finalists">
+                <div id="finalist1" class="finalist-card champ-name">—</div>
+                <div class="vs-final">VS</div>
+                <div id="finalist2" class="finalist-card champ-name">—</div>
+            </div>
+            <div class="champ-box">
+                <div class="champ-title">Campeão do Torneio</div>
+                <div id="champName" class="champ-name">— Nenhum ainda —</div>
+            </div>
+            <div class="controls final-controls">
+                <button id="declareWinnerBtn" class="btn neon-btn">Declarar Campeão</button>
+                <button id="clearChampionBtn" class="btn">Limpar Memorial</button>
+            </div>
         </section>
+
         <footer class="card footer">
             <p>Projeto: <strong>Torneio Retro Tech</strong> • Realizado pelo <strong>IFC Campus Brusque</strong></p>
             <p>Data: <strong>23/10/2025</strong></p>
-            <p>🕹️ By <a href="https://www.instagram.com/kaik_kyoshy" target="_blank">Kaik
-                    Kyoshy</a> e <a href="https://www.linkedin.com/in/abraaoteixeira" target="_blank">Abraão Texeira</a>
+            <p>🕹️ By <a href="https://www.instagram.com/kaik_kyoshy" target="_blank">Kaik Kyoshy</a> e <a
+                    href="https://www.linkedin.com/in/abraaoteixeira" target="_blank">Abraão Texeira</a>
             </p>
         </footer>
     </main>
+
+    <div id="notification-overlay" class="hidden">
+        <div id="notification-box">
+            Tempo Esgotado!
+        </div>
+    </div>
+
+    <div id="rulesModal" class="modal-overlay hidden">
+        <div class="modal-content card">
+            <button id="closeRulesBtn" class="modal-close-btn">&times;</button>
+            <h2>Regras e Organização — Torneio Retro Tech</h2>
+
+            <h3>Formato Geral</h3>
+            <ul>
+                <li>O torneio será realizado em formato de pontuação, com todos os participantes jogando os três jogos:
+                    Bomberman, Super Mario Kart e Street Fighter II.</li>
+                <li>Ao final das três fases, os dois jogadores com maior pontuação geral disputarão a grande final em
+                    Street Fighter II.</li>
+                <li>Todas as partidas serão realizadas em estações equipadas com Raspberry Pi e o sistema Lakka, com
+                    suporte técnico e acompanhamento de monitores.</li>
+            </ul>
+
+            <h3>Jogos e Dinâmica</h3>
+            <h4>🎮 Fase 1 — Bomberman (Arena de 4 jogadores)</h4>
+            <ul>
+                <li>Cada grupo joga 3 rodadas.</li>
+                <li>Pontuação por posição:
+                    <ul>
+                        <li>🥇 1º lugar: 6 pontos</li>
+                        <li>🥈 2º lugar: 4 pontos</li>
+                        <li>🥉 3º lugar: 2 pontos</li>
+                        <li>🟨 4º lugar: 1 ponto</li>
+                    </ul>
+                </li>
+                <li>Tempo por rodada: 2 minutos (Total por grupo: 6 min).</li>
+            </ul>
+
+            <h4>🏎️ Fase 2 — Super Mario Kart (Corrida 1x1)</h4>
+            <ul>
+                <li>Partidas 1x1, cada jogador corre 2 vezes.</li>
+                <li>Pontuação por resultado:
+                    <ul>
+                        <li>🏆 Vitória: 7 pontos</li>
+                        <li>❌ Derrota: 3 pontos</li>
+                        <li>⚠️ Erro ou abandono: 0 pontos</li>
+                    </ul>
+                </li>
+                <li>Tempo por corrida: 5 minutos (Total por jogador: 10 min).</li>
+            </ul>
+
+            <h4>🥊 Fase 3 — Street Fighter II (Lutas 1x1)</h4>
+            <ul>
+                <li>Cada jogador participa de 3 lutas.</li>
+                <li>Pontuação por resultado:
+                    <ul>
+                        <li>🏆 Vitória: 8 pontos</li>
+                        <li>❌ Derrota: 4 pontos</li>
+                    </ul>
+                </li>
+                <li>Tempo por luta: 1 minuto e 40 segundos (Total por jogador: 5 min).</li>
+            </ul>
+
+            <h3>Final — Disputa entre os 2 melhores</h3>
+            <ul>
+                <li>Jogo: Street Fighter II (1x1)</li>
+                <li>Formato: 3 partidas</li>
+                <li>Tempo total da final: 5 minutos</li>
+            </ul>
+
+            <h3>Cronograma Estimado (Total: ~1 hora)</h3>
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th>Etapa</th>
+                        <th>Tempo Estimado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Bomberman (Grupo 1)</td>
+                        <td>6 min</td>
+                    </tr>
+                    <tr>
+                        <td>Troca de grupos</td>
+                        <td>2 min</td>
+                    </tr>
+                    <tr>
+                        <td>Bomberman (Grupo 2)</td>
+                        <td>6 min</td>
+                    </tr>
+                    <tr>
+                        <td>Troca de jogo</td>
+                        <td>2 min</td>
+                    </tr>
+                    <tr>
+                        <td>Mario Kart (Grupo 1)</td>
+                        <td>5 min</td>
+                    </tr>
+                    <tr>
+                        <td>Troca de grupos</td>
+                        <td>2 min</td>
+                    </tr>
+                    <tr>
+                        <td>Mario Kart (Grupo 2)</td>
+                        <td>5 min</td>
+                    </tr>
+                    <tr>
+                        <td>Troca de jogo</td>
+                        <td>2 min</td>
+                    </tr>
+                    <tr>
+                        <td>Street Fighter (Grupo 1)</td>
+                        <td>5 min</td>
+                    </tr>
+                    <tr>
+                        <td>Troca de grupos</td>
+                        <td>2 min</td>
+                    </tr>
+                    <tr>
+                        <td>Street Fighter (Grupo 2)</td>
+                        <td>5 min</td>
+                    </tr>
+                    <tr>
+                        <td>Intervalos e transições</td>
+                        <td>5 min</td>
+                    </tr>
+                    <tr>
+                        <td>Final</td>
+                        <td>5 min</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
     <canvas id="confettiCanvas"></canvas>
     <audio id="bgMusic" loop src="https://opengameart.org/sites/default/files/Arcade%20fast%20flow1.ogg"></audio>
     <audio id="sfx-click" src="https://opengameart.org/sites/default/files/button-1.ogg"></audio>
@@ -149,6 +305,5 @@
     <div id="music-control" class="btn" title="Ativar/Desativar música">🔇</div>
     <script src="script.js"></script>
 </body>
-
 
 </html>
